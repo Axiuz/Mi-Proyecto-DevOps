@@ -21,6 +21,7 @@ Mi-Proyecto-DevOps-2/
 │   └── package.json
 ├── Scripts/
 │   ├── start.sh             # Script principal de despliegue en EC2
+│   ├── backup.py            # Script de respaldo automático del proyecto
 │   ├── deploy-ec2.sh        # Script de deploy al servidor EC2
 │   └── deploy-s3.sh         # Script de deploy del frontend a S3
 ├── docker-compose.yml       # Orquestación de contenedores (API + MySQL)
@@ -180,6 +181,7 @@ El script se encarga automáticamente de:
 6. Esperar a que la API responda en `/api/health`
 7. Importar el schema SQL si la base de datos está vacía
 8. Hacer el build del frontend React y subirlo al bucket S3
+9. Ejecutar un respaldo completo del proyecto
 
 ---
 
@@ -264,42 +266,51 @@ cd Hunnab && npm install && npm start
 
 ## Respaldos automáticos
 
-El script `Scripts/backup.sh` genera respaldos locales en la instancia EC2 de forma totalmente independiente del stack principal.
+El script `Scripts/backup.py` genera respaldos locales del proyecto completo en la instancia EC2. Se ejecuta automáticamente al final de `start.sh`, por lo que cada despliegue deja un respaldo guardado.
 
-**Qué respalda:**
-- Dump completo de MySQL (comprimido con gzip)
-- Archivo `.env`
+**Qué respalda:** toda la carpeta del proyecto (`~/app/`)
 
 **Dónde los guarda:** `~/backups/hunnab/`
 
-**Retención:** últimos 7 respaldos (los más antiguos se eliminan automáticamente)
-
-### Activar el cron (una sola vez)
-
-```bash
-bash ~/app/Scripts/backup.sh --setup-cron
-```
-
-Esto programa el script para ejecutarse **todos los días a las 3:00 AM**. Para verificarlo:
-
-```bash
-crontab -l
-```
+**Retención:** últimos 3 respaldos (al cuarto, el más antiguo se elimina automáticamente)
 
 ### Ejecutar un respaldo manual
 
 ```bash
-bash ~/app/Scripts/backup.sh
+python3 ~/app/Scripts/backup.py
 ```
 
-### Gestión del cron
+### Activar el cron (opcional)
+
+Si quieres respaldos automáticos diarios independientes del deploy:
+
+```bash
+python3 ~/app/Scripts/backup.py --setup-cron
+```
+
+Esto programa el script para ejecutarse **todos los días a las 3:00 AM**. Para verificarlo o desactivarlo:
 
 ```bash
 # Ver el cron activo
 crontab -l
 
 # Desactivar el respaldo automático
-crontab -l | grep -v backup.sh | crontab -
+crontab -l | grep -v backup.py | crontab -
+```
+
+### Mensaje de confirmación
+
+Al finalizar `start.sh`, verás la salida del backup seguida de su confirmación:
+
+```
+[INFO] Inicio: 2026-04-13_03-00-00
+[INFO] Archivo: hunnab_backup_2026-04-13_03-00-00.tar.gz
+[INFO] Respaldo completado
+
+============================================
+  Backup realizado exitosamente
+  Ruta: /root/backups/hunnab/hunnab_backup_2026-04-13_03-00-00.tar.gz
+============================================
 ```
 
 ### Ver el historial de respaldos

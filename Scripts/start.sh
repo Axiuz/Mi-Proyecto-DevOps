@@ -251,3 +251,21 @@ echo ""
 echo "  Ver logs:    sudo docker compose logs -f api"
 echo "  Detener:     sudo docker compose down"
 echo "============================================"
+
+# ════════════════════════════════════════════════════════════
+# 9. BACKUP DEL PROYECTO
+# ════════════════════════════════════════════════════════════
+info "Ejecutando backup del proyecto..."
+BACKUP_OUTPUT=$(python3 "$SCRIPT_DIR/backup.py")
+echo "$BACKUP_OUTPUT"
+BACKUP_PATH=$(echo "$BACKUP_OUTPUT" | grep '^BACKUP_PATH=' | cut -d= -f2-)
+
+echo ""
+echo "============================================"
+if [ -n "$BACKUP_PATH" ]; then
+  echo "  Backup realizado exitosamente"
+  echo "  Ruta: $BACKUP_PATH"
+else
+  echo "  Backup: no se pudo confirmar la ruta"
+fi
+echo "============================================"
