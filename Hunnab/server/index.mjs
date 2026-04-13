@@ -102,7 +102,11 @@ const BASE_CATALOG_PRODUCTS = [
 ];
 
 // Middlewares globales
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000' }));
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+app.use(cors({ origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins }));
 app.use(express.json());
 
 const jwtManager = new JWTManager({

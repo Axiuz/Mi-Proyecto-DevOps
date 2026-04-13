@@ -1,0 +1,45 @@
+services:
+  # ── Base de datos MySQL ──────────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: hunnab_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${DB_NAME:-Hunnab_Q}
+      MYSQL_USER: ${DB_USER:-appuser}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-AppPass_123!}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Inicializa el esquema la primera vez que levanta
+      - ./Hunnab/BD Hunnab.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-rootpass}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend Express ──────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./Hunnab
+      dockerfile: Dockerfile
+    container_name: hunnab_api
+    restart: unless-stopped
+    env_file:
+      - ./Hunnab/.env
+    environment:
+      # Sobreescribe el host para apuntar al contenedor de MySQL
+      DB_HOST: db
+      DB_PORT: 3306
+      NODE_ENV: production
+    ports:
+      - "${API_PORT:-4000}:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mysql_data:

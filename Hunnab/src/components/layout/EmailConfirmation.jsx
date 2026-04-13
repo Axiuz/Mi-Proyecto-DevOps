@@ -17,8 +17,9 @@ export async function sendEmailConfirmationByOrderId(orderId, token = '') {
     headers.Authorization = `Bearer ${safeToken}`;
   }
 
+  const apiBase = process.env.REACT_APP_API_BASE || '';
   try {
-    const response = await fetch(`/api/orders/${parsedOrderId}/email-confirmation`, {
+    const response = await fetch(`${apiBase}/api/orders/${parsedOrderId}/email-confirmation`, {
       method: 'POST',
       headers,
     });
