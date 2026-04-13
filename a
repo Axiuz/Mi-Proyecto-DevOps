@@ -1,4 +1,0 @@
-rsync -avz --exclude 'node_modules' --exclude '.git' \
--e "ssh -i ~/Downloads/labsuser.pem" \
-. ubuntu@13.220.93.134:~/app
-
