@@ -1,0 +1,8 @@
+node_modules
+build
+src
+public
+.env
+.env.*
+.DS_Store
+*.md
