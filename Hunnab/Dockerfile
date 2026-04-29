@@ -1,8 +1,8 @@
 # ---- Build stage: instala dependencias ----
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY package.json ./
-RUN npm install --omit=dev
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
 # ---- Runtime stage ----
 FROM node:20-alpine AS runtime

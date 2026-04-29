@@ -1,0 +1,201 @@
+name: CI/CD — Hunnab.Q
+
+# ─────────────────────────────────────────────
+# CUÁNDO SE EJECUTA
+# ─────────────────────────────────────────────
+on:
+  push:
+    branches:
+      - main      # deploy a producción
+      - pruebas   # deploy a entorno de pruebas
+  pull_request:
+    branches:
+      - main      # solo tests, sin deploy
+
+# ─────────────────────────────────────────────
+# VARIABLES GLOBALES
+# ─────────────────────────────────────────────
+env:
+  NODE_VERSION: "20"
+  WORKING_DIR: ./Hunnab
+
+jobs:
+  # ══════════════════════════════════════════
+  # JOB 1: TESTS (corre en todo push/PR)
+  # ══════════════════════════════════════════
+  test:
+    name: Tests y Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: Hunnab/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm ci
+
+      - name: Ejecutar tests
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm test -- --watchAll=false --passWithNoTests
+        env:
+          CI: true
+
+  # ══════════════════════════════════════════
+  # JOB 2: BUILD DEL FRONTEND (solo en push)
+  # ══════════════════════════════════════════
+  build-frontend:
+    name: Build Frontend React
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: Hunnab/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm ci
+
+      - name: Build de React
+        working-directory: ${{ env.WORKING_DIR }}
+        run: npm run build
+        env:
+          REACT_APP_API_BASE: ${{ secrets.REACT_APP_API_BASE }}
+          CI: false   # evita que warnings de React se traten como errores
+
+      - name: Subir build como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: Hunnab/build/
+          retention-days: 1
+
+  # ══════════════════════════════════════════
+  # JOB 3: DEPLOY FRONTEND A S3
+  # ══════════════════════════════════════════
+  deploy-s3:
+    name: Deploy Frontend → S3
+    runs-on: ubuntu-latest
+    needs: build-frontend
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Descargar artefacto del build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: build/
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy HTML a S3 (sin caché)
+        run: |
+          aws s3 sync build/ s3://${{ secrets.S3_BUCKET }} \
+            --exclude "*" \
+            --include "*.html" \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --delete
+
+      - name: Deploy JS/CSS a S3 (con caché larga)
+        run: |
+          aws s3 sync build/ s3://${{ secrets.S3_BUCKET }} \
+            --exclude "*.html" \
+            --cache-control "public, max-age=31536000, immutable" \
+            --delete
+
+      - name: URL del frontend
+        run: |
+          echo "Frontend disponible en:"
+          echo "http://${{ secrets.S3_BUCKET }}.s3-website-${{ secrets.AWS_REGION }}.amazonaws.com"
+
+  # ══════════════════════════════════════════
+  # JOB 4: DEPLOY BACKEND A EC2
+  # ══════════════════════════════════════════
+  deploy-ec2:
+    name: Deploy Backend → EC2
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Instalar SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Agregar EC2 a known_hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Copiar código al servidor EC2
+        run: |
+          rsync -az --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='Hunnab/build' \
+            ./ ubuntu@${{ secrets.EC2_HOST }}:~/app/
+
+      - name: Escribir .env en EC2
+        run: |
+          ssh ubuntu@${{ secrets.EC2_HOST }} "cat > ~/app/Hunnab/.env << 'ENVEOF'
+          DB_HOST=db
+          DB_PORT=3306
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          API_PORT=4000
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_EXPIRES_IN_SECONDS=86400
+          JWT_ISSUER=hunnab-api
+          JWT_AUDIENCE=hunnab-web
+          CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}
+          FRONTEND_BASE_URL=${{ secrets.FRONTEND_BASE_URL }}
+          PAYPAL_ENV=${{ secrets.PAYPAL_ENV }}
+          PAYPAL_CLIENT_ID=${{ secrets.PAYPAL_CLIENT_ID }}
+          PAYPAL_CLIENT_SECRET=${{ secrets.PAYPAL_CLIENT_SECRET }}
+          PAYPAL_CURRENCY=MXN
+          EMAILJS_SERVICE_ID=${{ secrets.EMAILJS_SERVICE_ID }}
+          EMAILJS_TEMPLATE_ID=${{ secrets.EMAILJS_TEMPLATE_ID }}
+          EMAILJS_PUBLIC_KEY=${{ secrets.EMAILJS_PUBLIC_KEY }}
+          EMAILJS_PRIVATE_KEY=${{ secrets.EMAILJS_PRIVATE_KEY }}
+          ENVEOF"
+
+      - name: Levantar contenedores en EC2
+        run: |
+          ssh ubuntu@${{ secrets.EC2_HOST }} "
+            cd ~/app
+            sudo docker compose down --remove-orphans
+            sudo docker compose up --build --force-recreate -d
+            sudo docker compose ps
+          "
+
+      - name: Verificar que la API responde
+        run: |
+          sleep 15
+          curl --retry 5 --retry-delay 5 --fail \
+            http://${{ secrets.EC2_HOST }}:4000/api/health \
+            && echo "API OK" || echo "API no responde aún — revisa los logs"
