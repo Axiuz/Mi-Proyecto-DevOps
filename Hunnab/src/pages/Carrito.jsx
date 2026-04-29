@@ -35,6 +35,7 @@ function CartPage({ app }) {
     app.cart.updateItemQuantity({
       productId: item.productId,
       quantity: boundedQty,
+      size: item.size || '',
     });
   };
 
@@ -102,6 +103,11 @@ function CartPage({ app }) {
 
               <div className="cart-row__content">
                 <h3>{item.title}</h3>
+                {item.size ? (
+                  <p style={{ margin: '2px 0 4px', fontSize: '13px', color: '#666' }}>
+                    Talla: {item.size}
+                  </p>
+                ) : null}
                 <strong>{app.currency.formatMXN(item.unitPrice)}</strong>
                 <p className={`cart-stock ${item.stock <= 0 ? 'is-out' : ''}`}>
                   {item.stock <= 0 ? 'Sin stock disponible' : `Stock disponible: ${item.stock}`}
@@ -129,7 +135,7 @@ function CartPage({ app }) {
                 <button
                   type="button"
                   className="cart-remove"
-                  onClick={() => app.cart.removeItem({ productId: item.productId })}
+                  onClick={() => app.cart.removeItem({ productId: item.productId, size: item.size || '' })}
                 >
                   Eliminar
                 </button>

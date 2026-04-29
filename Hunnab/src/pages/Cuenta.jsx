@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 const REGEX_PASSWORD = /^(?=.*[!@#$%^&*])[A-Za-z0-9!@#$%^&*]{6,10}$/;
+const RING_SIZES = ['4', '5', '6', '7', '8', '9', '10', '11', '12'];
 const EMPTY_ACCOUNT_FORM = {
   nombre: '',
   correo: '',
@@ -67,6 +68,7 @@ function AccountPage({ app }) {
     img: '',
     imgHover: '',
     categoryKey: 'collares',
+    sizes: [],
   });
   const [editDrafts, setEditDrafts] = useState({});
 
@@ -436,6 +438,25 @@ function AccountPage({ app }) {
     setCreateProductForm((prev) => ({ ...prev, [field]: event.target.value }));
   };
 
+  const onCreateCategoryChange = (event) => {
+    clearAdminMessages();
+    const newCategory = event.target.value;
+    setCreateProductForm((prev) => ({
+      ...prev,
+      categoryKey: newCategory,
+      sizes: newCategory === 'anillos' ? prev.sizes : [],
+    }));
+  };
+
+  const toggleCreateProductSize = (s) => {
+    clearAdminMessages();
+    setCreateProductForm((prev) => {
+      const current = Array.isArray(prev.sizes) ? prev.sizes : [];
+      const next = current.includes(s) ? current.filter((x) => x !== s) : [...current, s];
+      return { ...prev, sizes: next };
+    });
+  };
+
   // Acciones CRUD visuales desde panel admin.
   const createProductFromAdmin = async (event) => {
     event.preventDefault();
@@ -464,6 +485,7 @@ function AccountPage({ app }) {
       stock: '10',
       img: '',
       imgHover: '',
+      sizes: [],
     }));
     refreshAdminPanel();
   };
@@ -924,7 +946,7 @@ function AccountPage({ app }) {
                         <ul>
                           {pedido.items.map((item) => (
                             <li key={`${pedido.id}-${item.productId}`}>
-                              {`${item.quantity} x ${item.title} - ${app.currency.formatMXN(item.subtotal)}`}
+                              {`${item.quantity} x ${item.title}${item.size ? ` (Talla ${item.size})` : ''} - ${app.currency.formatMXN(item.subtotal)}`}
                             </li>
                           ))}
                         </ul>
@@ -1144,7 +1166,7 @@ function AccountPage({ app }) {
                     <select
                       id="admin-product-category"
                       value={createProductForm.categoryKey}
-                      onChange={onCreateProductFieldChange('categoryKey')}
+                      onChange={onCreateCategoryChange}
                     >
                       {adminCategoryKeys.map((categoryKey) => (
                         <option key={categoryKey} value={categoryKey}>
@@ -1153,6 +1175,24 @@ function AccountPage({ app }) {
                       ))}
                     </select>
                   </div>
+
+                  {createProductForm.categoryKey === 'anillos' && (
+                    <div className="admin-field admin-field--wide">
+                      <label>Tallas disponibles</label>
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '6px' }}>
+                        {RING_SIZES.map((s) => (
+                          <label key={s} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '14px' }}>
+                            <input
+                              type="checkbox"
+                              checked={createProductForm.sizes.includes(s)}
+                              onChange={() => toggleCreateProductSize(s)}
+                            />
+                            {s}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="admin-form-actions">
                     <button type="submit" className="admin-btn admin-btn--primary">
