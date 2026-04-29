@@ -306,7 +306,7 @@ function mapOrderStatus(estado) {
   if (normalized === 'PENDIENTE') {
     return 'Pendiente';
   }
-  if (normalized === 'EN PREPARACION' || normalized === 'PAGADO') {
+  if (normalized === 'EN PREPARACION') {
     return 'En preparacion';
   }
   if (normalized === 'ENVIADO') {
