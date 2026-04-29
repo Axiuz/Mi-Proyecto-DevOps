@@ -137,14 +137,6 @@ export class PayPalOrdersService {
     });
     return data;
   }
-
-  /**
-   * Consulta una orden (útil para debug/estado).
-   */
-  async getOrder(orderId) {
-    if (!orderId) throw new Error("orderId requerido.");
-    return this.api(`/v2/checkout/orders/${encodeURIComponent(orderId)}`, { method: "GET" });
-  }
 }
 
 function safeJson(text) {
