@@ -136,7 +136,6 @@
     "SGApi": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "GroupName": { "Fn::Sub": "${ProjectName}-sg-api" },
         "GroupDescription": "Acceso SSH, HTTP y puerto API",
         "VpcId": { "Ref": "VPC" },
         "SecurityGroupIngress": [
@@ -183,7 +182,6 @@
     "SGDatabase": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "GroupName": { "Fn::Sub": "${ProjectName}-sg-db" },
         "GroupDescription": "MySQL accesible solo desde la API",
         "VpcId": { "Ref": "VPC" },
         "SecurityGroupIngress": [
