@@ -1,0 +1,62 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Hunnab.Q — Crea el bucket S3 para el frontend con hosting estatico",
+
+  "Parameters": {
+    "BucketName": {
+      "Type": "String",
+      "Description": "Nombre unico del bucket S3 (ej: hunnab-frontend-2026)"
+    }
+  },
+
+  "Resources": {
+
+    "FrontendBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": { "Ref": "BucketName" },
+        "WebsiteConfiguration": {
+          "IndexDocument": "index.html",
+          "ErrorDocument": "index.html"
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": false,
+          "IgnorePublicAcls": false,
+          "BlockPublicPolicy": false,
+          "RestrictPublicBuckets": false
+        }
+      }
+    },
+
+    "FrontendBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "DependsOn": "FrontendBucket",
+      "Properties": {
+        "Bucket": { "Ref": "FrontendBucket" },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": "*",
+              "Action": "s3:GetObject",
+              "Resource": { "Fn::Sub": "arn:aws:s3:::${BucketName}/*" }
+            }
+          ]
+        }
+      }
+    }
+
+  },
+
+  "Outputs": {
+    "FrontendURL": {
+      "Value": { "Fn::GetAtt": [ "FrontendBucket", "WebsiteURL" ] },
+      "Description": "URL publica del frontend"
+    },
+    "BucketName": {
+      "Value": { "Ref": "FrontendBucket" },
+      "Description": "Nombre del bucket creado"
+    }
+  }
+}
