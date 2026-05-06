@@ -285,7 +285,7 @@ class CatalogModel {
     return candidate;
   }
 
-  adminCreateProduct({ title, price, stock, img, imgHover = '', categoryKey }) {
+  adminCreateProduct({ title, price, stock, img, imgHover = '', categoryKey, sizes = [] }) {
     const safeTitle = String(title || '').trim();
     const safeImg = String(img || '').trim();
     const safeImgHover = String(imgHover || '').trim();
@@ -308,12 +308,14 @@ class CatalogModel {
     }
 
     const id = this.generateProductId(safeTitle);
+    const safeSizes = Array.isArray(sizes) ? sizes.map(String).filter(Boolean) : [];
     this.customProducts[id] = {
       title: safeTitle,
       price: numericPrice,
       stock: numericStock,
       img: safeImg,
       ...(safeImgHover ? { imgHover: safeImgHover } : {}),
+      ...(safeSizes.length > 0 ? { sizes: safeSizes } : {}),
     };
 
     const existingCategoryProducts = Array.isArray(this.customCategoryProducts[safeCategory])
@@ -650,15 +652,15 @@ class CartManager {
         .map((item) => this.normalizeItem(item))
         .filter(Boolean);
 
-      // Compatibilidad con carritos antiguos que separaban por color.
       const mergedByProduct = new Map();
       normalizedItems.forEach((item) => {
-        const existing = mergedByProduct.get(item.productId);
+        const key = `${item.productId}|${item.size || ''}`;
+        const existing = mergedByProduct.get(key);
         if (!existing) {
-          mergedByProduct.set(item.productId, { ...item });
+          mergedByProduct.set(key, { ...item });
           return;
         }
-        mergedByProduct.set(item.productId, {
+        mergedByProduct.set(key, {
           ...existing,
           quantity: Math.min(99, existing.quantity + item.quantity),
         });
@@ -692,14 +694,21 @@ class CartManager {
       return null;
     }
 
-    return {
+    const normalized = {
       productId: String(item.productId),
       quantity: Math.max(1, Math.min(99, quantity)),
     };
+    if (item.size) {
+      normalized.size = String(item.size);
+    }
+    return normalized;
   }
 
-  findItemIndex(productId) {
-    return this.items.findIndex((item) => item.productId === productId);
+  findItemIndex(productId, size = '') {
+    const normalizedSize = String(size || '');
+    return this.items.findIndex(
+      (item) => item.productId === productId && String(item.size || '') === normalizedSize
+    );
   }
 
   subscribe(listener) {
@@ -711,21 +720,21 @@ class CartManager {
     return this.items.reduce((sum, item) => sum + item.quantity, 0);
   }
 
-  getItemQuantity(productId) {
-    const idx = this.findItemIndex(String(productId));
+  getItemQuantity(productId, size = '') {
+    const idx = this.findItemIndex(String(productId), size);
     if (idx < 0) {
       return 0;
     }
     return this.items[idx].quantity;
   }
 
-  addItem({ productId, quantity = 1 }) {
-    const normalized = this.normalizeItem({ productId, quantity });
+  addItem({ productId, quantity = 1, size = '' }) {
+    const normalized = this.normalizeItem({ productId, quantity, size });
     if (!normalized) {
       return;
     }
 
-    const idx = this.findItemIndex(normalized.productId);
+    const idx = this.findItemIndex(normalized.productId, normalized.size || '');
     if (idx >= 0) {
       this.items[idx] = {
         ...this.items[idx],
@@ -739,18 +748,18 @@ class CartManager {
     this.emit();
   }
 
-  updateItemQuantity({ productId, quantity }) {
+  updateItemQuantity({ productId, quantity, size = '' }) {
     const normalizedQty = Number.parseInt(quantity, 10);
     if (Number.isNaN(normalizedQty)) {
       return;
     }
 
     if (normalizedQty <= 0) {
-      this.removeItem({ productId });
+      this.removeItem({ productId, size });
       return;
     }
 
-    const idx = this.findItemIndex(String(productId));
+    const idx = this.findItemIndex(String(productId), size);
     if (idx < 0) {
       return;
     }
@@ -764,8 +773,8 @@ class CartManager {
     this.emit();
   }
 
-  removeItem({ productId }) {
-    const idx = this.findItemIndex(String(productId));
+  removeItem({ productId, size = '' }) {
+    const idx = this.findItemIndex(String(productId), size);
     if (idx < 0) {
       return;
     }
@@ -916,6 +925,7 @@ class OrderManager {
             title: item.title,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
+            size: item.size || '',
           })),
           total,
         }),
@@ -1176,6 +1186,7 @@ class CheckoutManager {
           unitPrice: item.unitPrice,
           subtotal: item.subtotal,
           stock: item.stock,
+          size: item.size || '',
         })),
         total,
       },

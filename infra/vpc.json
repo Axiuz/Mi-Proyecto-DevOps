@@ -1,0 +1,238 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Hunnab.Q — VPC, subnets, Internet Gateway y Security Groups",
+
+  "Parameters": {
+    "ProjectName": {
+      "Type": "String",
+      "Default": "hunnab",
+      "Description": "Prefijo para nombrar los recursos"
+    },
+    "VpcCidr": {
+      "Type": "String",
+      "Default": "10.0.0.0/16",
+      "Description": "Bloque CIDR de la VPC"
+    },
+    "PublicSubnetCidr": {
+      "Type": "String",
+      "Default": "10.0.1.0/24",
+      "Description": "Subred publica (EC2 / API)"
+    },
+    "PrivateSubnetCidr": {
+      "Type": "String",
+      "Default": "10.0.2.0/24",
+      "Description": "Subred privada (Base de datos)"
+    },
+    "PublicSubnetAZ": {
+      "Type": "String",
+      "Default": "us-west-1a",
+      "AllowedValues": ["us-west-1a", "us-west-1b"],
+      "Description": "Zona de disponibilidad de la subred publica"
+    },
+    "PrivateSubnetAZ": {
+      "Type": "String",
+      "Default": "us-west-1b",
+      "AllowedValues": ["us-west-1a", "us-west-1b"],
+      "Description": "Zona de disponibilidad de la subred privada"
+    },
+    "AllowedSSHCidr": {
+      "Type": "String",
+      "Default": "0.0.0.0/0",
+      "Description": "CIDR autorizado para SSH (recomendado: tu IP con /32)"
+    }
+  },
+
+  "Resources": {
+
+    "VPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": { "Ref": "VpcCidr" },
+        "EnableDnsSupport": true,
+        "EnableDnsHostnames": true,
+        "Tags": [{ "Key": "Name", "Value": { "Fn::Sub": "${ProjectName}-vpc" } }]
+      }
+    },
+
+    "InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [{ "Key": "Name", "Value": { "Fn::Sub": "${ProjectName}-igw" } }]
+      }
+    },
+
+    "AttachGateway": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "InternetGatewayId": { "Ref": "InternetGateway" }
+      }
+    },
+
+    "PublicSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "CidrBlock": { "Ref": "PublicSubnetCidr" },
+        "AvailabilityZone": { "Ref": "PublicSubnetAZ" },
+        "MapPublicIpOnLaunch": true,
+        "Tags": [{ "Key": "Name", "Value": { "Fn::Sub": "${ProjectName}-subnet-public" } }]
+      }
+    },
+
+    "PrivateSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "CidrBlock": { "Ref": "PrivateSubnetCidr" },
+        "AvailabilityZone": { "Ref": "PrivateSubnetAZ" },
+        "MapPublicIpOnLaunch": false,
+        "Tags": [{ "Key": "Name", "Value": { "Fn::Sub": "${ProjectName}-subnet-private" } }]
+      }
+    },
+
+    "PublicRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "Tags": [{ "Key": "Name", "Value": { "Fn::Sub": "${ProjectName}-rt-public" } }]
+      }
+    },
+
+    "PublicRoute": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": "AttachGateway",
+      "Properties": {
+        "RouteTableId": { "Ref": "PublicRouteTable" },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": { "Ref": "InternetGateway" }
+      }
+    },
+
+    "PublicSubnetRouteAssoc": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": { "Ref": "PublicSubnet" },
+        "RouteTableId": { "Ref": "PublicRouteTable" }
+      }
+    },
+
+    "PrivateRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "Tags": [{ "Key": "Name", "Value": { "Fn::Sub": "${ProjectName}-rt-private" } }]
+      }
+    },
+
+    "PrivateSubnetRouteAssoc": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": { "Ref": "PrivateSubnet" },
+        "RouteTableId": { "Ref": "PrivateRouteTable" }
+      }
+    },
+
+    "SGApi": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupName": { "Fn::Sub": "${ProjectName}-sg-api" },
+        "GroupDescription": "Acceso SSH, HTTP y puerto API",
+        "VpcId": { "Ref": "VPC" },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 22,
+            "ToPort": 22,
+            "CidrIp": { "Ref": "AllowedSSHCidr" },
+            "Description": "SSH"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "ToPort": 80,
+            "CidrIp": "0.0.0.0/0",
+            "Description": "HTTP"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "0.0.0.0/0",
+            "Description": "HTTPS"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 4000,
+            "ToPort": 4000,
+            "CidrIp": "0.0.0.0/0",
+            "Description": "API Express"
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "-1",
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Todo el trafico saliente"
+          }
+        ],
+        "Tags": [{ "Key": "Name", "Value": { "Fn::Sub": "${ProjectName}-sg-api" } }]
+      }
+    },
+
+    "SGDatabase": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupName": { "Fn::Sub": "${ProjectName}-sg-db" },
+        "GroupDescription": "MySQL accesible solo desde la API",
+        "VpcId": { "Ref": "VPC" },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 3306,
+            "ToPort": 3306,
+            "SourceSecurityGroupId": { "Ref": "SGApi" },
+            "Description": "MySQL desde API"
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "-1",
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Todo el trafico saliente"
+          }
+        ],
+        "Tags": [{ "Key": "Name", "Value": { "Fn::Sub": "${ProjectName}-sg-db" } }]
+      }
+    }
+
+  },
+
+  "Outputs": {
+    "VpcId": {
+      "Description": "ID de la VPC",
+      "Value": { "Ref": "VPC" },
+      "Export": { "Name": { "Fn::Sub": "${ProjectName}-vpc-id" } }
+    },
+    "PublicSubnetId": {
+      "Description": "ID de la subred publica",
+      "Value": { "Ref": "PublicSubnet" },
+      "Export": { "Name": { "Fn::Sub": "${ProjectName}-subnet-public-id" } }
+    },
+    "PrivateSubnetId": {
+      "Description": "ID de la subred privada",
+      "Value": { "Ref": "PrivateSubnet" },
+      "Export": { "Name": { "Fn::Sub": "${ProjectName}-subnet-private-id" } }
+    },
+    "SGApiId": {
+      "Description": "ID del Security Group de la API",
+      "Value": { "Ref": "SGApi" },
+      "Export": { "Name": { "Fn::Sub": "${ProjectName}-sg-api-id" } }
+    },
+    "SGDatabaseId": {
+      "Description": "ID del Security Group de la base de datos",
+      "Value": { "Ref": "SGDatabase" },
+      "Export": { "Name": { "Fn::Sub": "${ProjectName}-sg-db-id" } }
+    }
+  }
+}

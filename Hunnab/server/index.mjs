@@ -263,6 +263,7 @@ async function ensureOrdersSchema() {
       id_usuario INT UNSIGNED NOT NULL,
       id_producto INT UNSIGNED NOT NULL,
       cantidad INT UNSIGNED NOT NULL DEFAULT 1,
+      talla VARCHAR(10) NULL,
       precio_unitario DECIMAL(10,2) NOT NULL,
       subtotal DECIMAL(10,2) GENERATED ALWAYS AS (cantidad * precio_unitario) STORED,
       estado ENUM('PENDIENTE','EN PREPARACION','ENVIADO') NOT NULL DEFAULT 'PENDIENTE',
@@ -275,6 +276,15 @@ async function ensureOrdersSchema() {
         ON DELETE RESTRICT
     )
   `);
+
+  const [tallaCol] = await pool.query(`
+    SELECT COLUMN_NAME FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pedidos' AND COLUMN_NAME = 'talla'
+    LIMIT 1
+  `);
+  if (tallaCol.length === 0) {
+    await pool.query('ALTER TABLE pedidos ADD COLUMN talla VARCHAR(10) NULL AFTER cantidad');
+  }
 
   const [idxUserState] = await pool.query(
     `
@@ -296,7 +306,7 @@ function mapOrderStatus(estado) {
   if (normalized === 'PENDIENTE') {
     return 'Pendiente';
   }
-  if (normalized === 'EN PREPARACION' || normalized === 'PAGADO') {
+  if (normalized === 'EN PREPARACION') {
     return 'En preparacion';
   }
   if (normalized === 'ENVIADO') {
@@ -345,6 +355,7 @@ function mapOrderRows(rows) {
           quantity: Number(row.cantidad || 0),
           unitPrice: Number(row.precio_unitario || 0),
           subtotal,
+          size: String(row.talla || '').trim() || null,
         },
       ],
     };
@@ -372,6 +383,7 @@ function normalizeOrderItems(items) {
         quantity,
         unitPrice: Number(unitPrice.toFixed(2)),
         subtotal,
+        size: String(item?.size || '').trim(),
       };
     })
     .filter(Boolean);
@@ -398,6 +410,7 @@ async function getOrderEmailConfirmationData(orderId) {
         p.id_usuario,
         p.fecha_creacion,
         p.cantidad,
+        p.talla,
         p.precio_unitario,
         p.subtotal,
         pr.nombre AS nombre_producto,
@@ -428,6 +441,8 @@ async function getOrderEmailConfirmationData(orderId) {
   const tax = Number((subtotal * 0.16).toFixed(2));
   const total = Number((subtotal + tax).toFixed(2));
   const itemName = String(row.nombre_producto || `Producto #${row.id_pedido}`).trim();
+  const talla = String(row.talla || '').trim();
+  const displayName = talla ? `${itemName} — Talla ${talla}` : itemName;
   const frontendBaseUrl = String(
     process.env.FRONTEND_BASE_URL || process.env.CORS_ORIGIN || 'http://localhost:3000'
   ).replace(/\/$/, '');
@@ -443,6 +458,7 @@ async function getOrderEmailConfirmationData(orderId) {
       orders: [
         {
           name: itemName,
+          talla: talla || '',
           units,
           price: unitPrice.toFixed(2),
           image_url: fallbackImage,
@@ -1032,8 +1048,8 @@ app.post('/api/orders/create', jwtManager.authenticateRequired(), async (req, re
       }
 
       const [orderInsert] = await connection.query(
-        'INSERT INTO pedidos (id_usuario, id_producto, cantidad, precio_unitario, estado) VALUES (?, ?, ?, ?, ?)',
-        [user.id_usuario, dbProductId, item.quantity, item.unitPrice, 'EN PREPARACION']
+        'INSERT INTO pedidos (id_usuario, id_producto, cantidad, talla, precio_unitario, estado) VALUES (?, ?, ?, ?, ?, ?)',
+        [user.id_usuario, dbProductId, item.quantity, item.size || null, item.unitPrice, 'EN PREPARACION']
       );
       const insertedId = Number(orderInsert.insertId);
       insertedOrderIds.push(insertedId);
@@ -1044,6 +1060,7 @@ app.post('/api/orders/create', jwtManager.authenticateRequired(), async (req, re
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         subtotal: Number((item.quantity * item.unitPrice).toFixed(2)),
+        size: item.size || null,
       });
     }
 
@@ -1194,6 +1211,7 @@ app.get('/api/orders/user-orders', jwtManager.authenticateRequired(), async (req
           p.id_producto,
           pr.nombre AS nombre_producto,
           p.cantidad,
+          p.talla,
           p.precio_unitario,
           p.subtotal,
           p.estado,
@@ -1257,6 +1275,7 @@ app.get('/api/orders/admin-orders', jwtManager.authenticateRequired(), async (re
           p.id_producto,
           pr.nombre AS nombre_producto,
           p.cantidad,
+          p.talla,
           p.precio_unitario,
           p.subtotal,
           p.estado,

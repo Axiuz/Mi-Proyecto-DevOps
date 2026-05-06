@@ -5,6 +5,7 @@ function ProductPage({ app, productId }) {
   // Datos y estado local
   const product = app.catalog.getProduct(productId);
   const [qty, setQty] = useState(1);
+  const [size, setSize] = useState('');
 
   if (!product) {
     return (
@@ -37,14 +38,19 @@ function ProductPage({ app, productId }) {
     setQty(Math.max(1, Math.min(maxQty, next)));
   };
 
-  /** Agrega el producto actual al carrito con cantidad seleccionada. */
+  /** Agrega el producto actual al carrito con cantidad y talla seleccionadas. */
   const addToCart = () => {
     if (isOutOfStock) {
       window.alert('Producto sin stock disponible.');
       return;
     }
 
-    const existingInCart = Number.parseInt(app.cart.getItemQuantity?.(productId), 10) || 0;
+    if (product.sizes && !size) {
+      window.alert('Selecciona una talla antes de agregar al carrito.');
+      return;
+    }
+
+    const existingInCart = Number.parseInt(app.cart.getItemQuantity?.(productId, size), 10) || 0;
     const availableToAdd = Math.max(0, availableStock - existingInCart);
     if (availableToAdd <= 0) {
       window.alert('Ya alcanzaste el stock disponible de este producto en tu carrito.');
@@ -52,9 +58,9 @@ function ProductPage({ app, productId }) {
     }
 
     const quantityToAdd = Math.min(Math.max(1, qty), availableToAdd);
-    app.cart.addItem({ productId, quantity: quantityToAdd });
+    app.cart.addItem({ productId, quantity: quantityToAdd, size });
     window.alert(
-      `Anadido: ${product.title}\nCantidad: ${quantityToAdd}\nStock restante: ${availableStock - existingInCart - quantityToAdd}`
+      `Anadido: ${product.title}${size ? ` — Talla ${size}` : ''}\nCantidad: ${quantityToAdd}\nStock restante: ${availableStock - existingInCart - quantityToAdd}`
     );
   };
 
@@ -78,6 +84,36 @@ function ProductPage({ app, productId }) {
             <span className="dot" />
             <span>{isOutOfStock ? 'Sin stock' : `Stock disponible: ${availableStock}`}</span>
           </div>
+
+          {product.sizes && (
+            <div className="opt">
+              <label>Talla</label>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {product.sizes.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={isOutOfStock}
+                    onClick={() => setSize(s)}
+                    style={{
+                      border: '1px solid',
+                      borderColor: size === s ? '#111' : '#ddd',
+                      background: size === s ? '#111' : '#fff',
+                      color: size === s ? '#fff' : '#333',
+                      borderRadius: '8px',
+                      padding: '6px 14px',
+                      cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                      fontSize: '13px',
+                      fontWeight: size === s ? '700' : '400',
+                      opacity: isOutOfStock ? 0.5 : 1,
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="opt">
             <label>Cantidad</label>

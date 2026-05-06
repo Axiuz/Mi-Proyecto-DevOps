@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS pedidos (
   id_usuario      INT UNSIGNED NOT NULL,
   id_producto     INT UNSIGNED NOT NULL,
   cantidad        INT UNSIGNED NOT NULL DEFAULT 1,
+  talla           VARCHAR(10) NULL,
   precio_unitario DECIMAL(10,2) NOT NULL,
   subtotal        DECIMAL(10,2) GENERATED ALWAYS AS (cantidad * precio_unitario) STORED,
   estado          ENUM('PENDIENTE','EN PREPARACION','ENVIADO') NOT NULL DEFAULT 'PENDIENTE',

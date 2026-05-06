@@ -1,8 +1,3 @@
-/**
- * Datos estaticos base del catalogo.
- * Este archivo define la "fuente de verdad" inicial para categorias y productos.
- * Los cambios visuales/admin en runtime se guardan en localStorage desde CatalogModel.
- */
 export const FALLBACK_IMAGE = '/imagenes/hunnabpng.png';
 
 export const HOME_CATEGORY_KEYS = ['collares', 'aretes', 'pulseras', 'anillos'];
@@ -145,12 +140,14 @@ export const PRODUCTS = {
     price: 290,
     stock: 11,
     img: 'imagenes/Anillo_Modelo.jpeg',
+    sizes: ['4', '5', '6', '7', '8', '9', '10', '11', '12'],
   },
   'anillo-muestra': {
     title: 'Anillo Muestra',
     price: 260,
     stock: 16,
     img: 'imagenes/Anillo_Muestra.jpeg',
+    sizes: ['4', '5', '6', '7', '8', '9', '10', '11', '12'],
   },
   'pulsera-nudo': {
     title: 'Pulsera Piedra Volcanica',
