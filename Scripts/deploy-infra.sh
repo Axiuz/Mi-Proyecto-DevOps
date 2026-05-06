@@ -114,10 +114,14 @@ PUBLIC_SUBNET=$(get_output "hunnab-vpc" "PublicSubnetId")
 SG_API=$(get_output "hunnab-vpc" "SGApiId")
 
 # ── 2. S3 ────────────────────────────────────────────────────
-deploy_stack "hunnab-s3" "$INFRA_DIR/s3-frontend.json" \
-  "BucketName=$S3_BUCKET_NAME"
-
-FRONTEND_URL=$(get_output "hunnab-s3" "FrontendURL")
+if aws s3api head-bucket --bucket "$S3_BUCKET_NAME" --region "$REGION" 2>/dev/null; then
+  warning "Bucket '$S3_BUCKET_NAME' ya existe — saltando creación del stack S3."
+  FRONTEND_URL="http://${S3_BUCKET_NAME}.s3-website-${REGION}.amazonaws.com"
+else
+  deploy_stack "hunnab-s3" "$INFRA_DIR/s3-frontend.json" \
+    "BucketName=$S3_BUCKET_NAME"
+  FRONTEND_URL=$(get_output "hunnab-s3" "FrontendURL")
+fi
 
 # ── Resumen ──────────────────────────────────────────────────
 echo ""
