@@ -26,13 +26,13 @@
     "PublicSubnetAZ": {
       "Type": "String",
       "Default": "us-west-1a",
-      "AllowedValues": ["us-west-1a", "us-west-1b"],
+      "AllowedValues": ["us-west-1a", "us-west-1c"],
       "Description": "Zona de disponibilidad de la subred publica"
     },
     "PrivateSubnetAZ": {
       "Type": "String",
-      "Default": "us-west-1b",
-      "AllowedValues": ["us-west-1a", "us-west-1b"],
+      "Default": "us-west-1c",
+      "AllowedValues": ["us-west-1a", "us-west-1c"],
       "Description": "Zona de disponibilidad de la subred privada"
     },
     "AllowedSSHCidr": {
