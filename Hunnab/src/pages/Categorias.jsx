@@ -1,5 +1,5 @@
-import CategoryTabs from '../components/CategoryTabs';
 import InfoAccordion from '../components/InfoAcordion';
+import SizeGuideAccordion from '../components/SizeGuideAccordion';
 
 /** Muestra una categoria, su contenido informativo y sus productos. */
 function CategoryPage({ app, categoryKey }) {
@@ -19,39 +19,46 @@ function CategoryPage({ app, categoryKey }) {
   }
 
   // Datos derivados para render
-  const showInfoAccordion = categoryKey !== 'collares' && categoryKey !== 'pulseras';
   const categoryProducts = app.catalog.getCategoryProducts(categoryKey);
+
+  // Si la categoria tiene subdivision por genero, se agrega como item extra del acordeon
+  const genderTab = category.tabs?.length
+    ? {
+        id: 'por-genero',
+        label: 'Por género',
+        content: (
+          <div className="gender-links">
+            {category.tabs.map((tab) => (
+              <a key={tab.id} className="gender-link" href={`#/${categoryKey}/${tab.id}`}>
+                {tab.label}
+              </a>
+            ))}
+          </div>
+        ),
+      }
+    : null;
 
   // Render
   return (
     <>
       <div className="crumb">Inicio / {category.title}</div>
-      <div
-        className="hero"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr .9fr',
-          gap: '14px',
-          alignItems: 'center',
-        }}
-      >
-        <div>
-          <h1 style={{ margin: '0 0 6px' }}>{category.title}</h1>
-          <p style={{ margin: 0, color: 'var(--muted)' }}>{category.desc}</p>
-          {!!category.tabs?.length && (
-            <CategoryTabs
-              tabs={category.tabs.map((tab) => ({
-                ...tab,
-                route: `#/${categoryKey}/${tab.id}`,
-                content: () => tab.content,
-              }))}
+      <div className="cat-card">
+        <div className="cat-card__grid">
+          <div>
+            <h1 style={{ margin: '0 0 6px' }}>{category.title}</h1>
+            <p style={{ margin: 0, color: 'var(--muted)' }}>{category.desc}</p>
+            <InfoAccordion
+              app={app}
+              category={category}
+              categoryKey={categoryKey}
+              extraTabs={genderTab ? [genderTab] : []}
             />
-          )}
-          {showInfoAccordion && <InfoAccordion app={app} category={category} />}
+          </div>
+          <div className="shot big" style={{ margin: 0 }}>
+            <img src={app.images.normalize(category.heroImg)} alt={category.title} />
+          </div>
         </div>
-        <div className="shot big" style={{ margin: 0 }}>
-          <img src={app.images.normalize(category.heroImg)} alt={category.title} />
-        </div>
+        <SizeGuideAccordion categoryKey={categoryKey} />
       </div>
 
       <div className="grid">

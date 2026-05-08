@@ -96,6 +96,7 @@ export const PRODUCTS = {
     stock: 15,
     img: 'imagenes/Collar_Aquamarina.jpeg',
     imgHover: 'imagenes/Collar_Nautilus_Negro.jpeg',
+    sizes: ['16"', '18"', '20"', '24"', '30"', '36"'],
   },
   'gargantilla-perla': {
     title: 'Collar Nautilus',
@@ -103,6 +104,7 @@ export const PRODUCTS = {
     stock: 12,
     img: 'imagenes/Collar_Nautilus.jpeg',
     imgHover: 'imagenes/Collar_Nautilus_Negro.jpeg',
+    sizes: ['16"', '18"', '20"', '24"', '30"', '36"'],
   },
   'gargantilla-minimal': {
     title: 'Collar Libelula',
@@ -110,18 +112,21 @@ export const PRODUCTS = {
     stock: 18,
     img: 'imagenes/Collar_Libelula.jpeg',
     imgHover: 'imagenes/Collar_Nautilus_Negro.jpeg',
+    sizes: ['16"', '18"', '20"', '24"', '30"', '36"'],
   },
   'corbatin-satin': {
     title: 'Collar Amatista',
     price: 280,
     stock: 10,
     img: 'imagenes/Collar_Amatista.jpeg',
+    sizes: ['16"', '18"', '20"', '24"', '30"', '36"'],
   },
   'corbatin-oro': {
     title: 'Collar Oro',
     price: 310,
     stock: 8,
     img: 'imagenes/Collar_Arbolvida.jpeg',
+    sizes: ['16"', '18"', '20"', '24"', '30"', '36"'],
   },
   'arracadas-clasicas': {
     title: 'Arracadas Clasicas',
@@ -140,26 +145,28 @@ export const PRODUCTS = {
     price: 290,
     stock: 11,
     img: 'imagenes/Anillo_Modelo.jpeg',
-    sizes: ['4', '5', '6', '7', '8', '9', '10', '11', '12'],
+    sizes: ['3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '12.5', '13'],
   },
   'anillo-muestra': {
     title: 'Anillo Muestra',
     price: 260,
     stock: 16,
     img: 'imagenes/Anillo_Muestra.jpeg',
-    sizes: ['4', '5', '6', '7', '8', '9', '10', '11', '12'],
+    sizes: ['3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '12.5', '13'],
   },
   'pulsera-nudo': {
     title: 'Pulsera Piedra Volcanica',
     price: 180,
     stock: 20,
     img: 'imagenes/Pulsera_Volcanica.png',
+    sizes: ['Extrapequeña', 'Pequeña', 'Mediana', 'Grande', 'Extragrande', 'XX-grande', 'XXX-grande'],
   },
   'pulsera-bicolor': {
     title: 'Pulsera Onyx',
     price: 210,
     stock: 13,
     img: 'imagenes/Pulseras_Onyx.png',
+    sizes: ['Extrapequeña', 'Pequeña', 'Mediana', 'Grande', 'Extragrande', 'XX-grande', 'XXX-grande'],
   },
 };
 
@@ -167,7 +174,7 @@ export const PRODUCTS = {
 export const DEFAULT_CATEGORY_TABS = [
   {
     id: 'descripcion',
-    label: 'Descripcion',
+    label: 'Descripción',
     content: (category) => category.desc,
   },
   {

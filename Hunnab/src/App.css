@@ -1702,6 +1702,109 @@ span:first-child{
   transform:scale(1.15);
 }
 
+/* Breadcrumb de categoria */
+.crumb{
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:10px;
+}
 
+/* Tarjeta principal de pagina de categoria */
+.cat-card{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:20px;
+  background:#fff;
+  margin-bottom:18px;
+}
 
-  
+.cat-card__grid{
+  display:grid;
+  grid-template-columns:1fr .9fr;
+  gap:14px;
+  align-items:start;
+}
+
+/* Acordeon de guia de tallas (ancho completo, debajo del grid) */
+.sg-accordion{
+  border-top:1px solid var(--line);
+  margin-top:14px;
+}
+
+@media (max-width:760px){
+  .cat-card__grid{
+    grid-template-columns:1fr;
+  }
+  .cat-card__grid .shot{
+    display:none;
+  }
+}
+
+/* ── Selector de genero en acordeon ── */
+.gender-links{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  padding:4px 0 6px;
+}
+
+.gender-link{
+  display:inline-flex;
+  align-items:center;
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:9px 18px;
+  font-size:13px;
+  font-weight:600;
+  background:#fff;
+  color:var(--fg);
+  transition:background .15s ease, border-color .15s ease;
+}
+
+.gender-link:hover{
+  background:var(--card);
+  border-color:#8b6b53;
+}
+
+/* ── Guias de tamaños ── */
+.sg-imgs{
+  display:flex;
+  flex-wrap:nowrap;
+  gap:16px;
+  align-items:flex-start;
+  margin-top:6px;
+  overflow-x:auto;
+  padding-bottom:6px;
+}
+
+.sg-img{
+  flex:0 0 auto;
+  height:320px;
+  width:auto;
+  border-radius:10px;
+  border:1px solid var(--line);
+}
+
+/* Contenedor con scroll vertical para imagenes tipo portrait */
+.sg-scroll{
+  flex:0 0 auto;
+  width:220px;
+  height:320px;
+  overflow-y:auto;
+  border:1px solid var(--line);
+  border-radius:10px;
+}
+
+.sg-img--portrait{
+  height:auto;
+  width:100%;
+  border:none;
+  border-radius:0;
+}
+
+@media (max-width:600px){
+  .sg-imgs{ flex-wrap:wrap; }
+  .sg-img{ height:auto; width:100%; }
+  .sg-img--portrait{ width:100%; }
+}
+
