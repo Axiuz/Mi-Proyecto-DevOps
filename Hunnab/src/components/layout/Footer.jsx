@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react';
+import { PRODUCTS } from '../../data/catalog-data';
 
-const FOOTER_SLIDES = [
-  { src: '/imagenes/Collar_Arbolvida.jpeg', alt: 'Collar arbol de vida' },
-  { src: '/imagenes/Anillo_Modelo.jpeg', alt: 'Anillo modelo' },
-  { src: '/imagenes/Collar_Libelula.jpeg', alt: 'Collar libelula' },
-];
+function shuffled(arr) {
+  const copy = arr.map((p, i) => ({ src: p.img.startsWith('/') ? p.img : `/${p.img}`, alt: p.title }));
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+const FOOTER_SLIDES = shuffled(Object.values(PRODUCTS));
 
 /** Pie de pagina con carrusel visual y datos de contacto. */
 function Footer() {

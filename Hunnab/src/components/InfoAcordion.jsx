@@ -1,10 +1,10 @@
 import { useState } from 'react';
 
 /** Acordeon con informacion extendida de la categoria seleccionada. */
-function InfoAccordion({ app, category }) {
+function InfoAccordion({ app, category, categoryKey, extraTabs = [] }) {
   // Estado y datos de entrada
   const [openId, setOpenId] = useState(null);
-  const tabs = app.catalog.getCategoryInfoTabs(category);
+  const tabs = [...app.catalog.getCategoryInfoTabs(category, categoryKey), ...extraTabs];
 
   // Render
   return (
@@ -30,7 +30,7 @@ function InfoAccordion({ app, category }) {
               data-panel={tab.id}
             >
               <div className="accordion-panel-inner">
-                <p>{tab.content}</p>
+                {typeof tab.content === 'string' ? <p>{tab.content}</p> : tab.content}
               </div>
             </div>
           </div>

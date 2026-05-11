@@ -18,10 +18,7 @@ function ProductPage({ app, productId }) {
     );
   }
 
-  const images = [
-    app.images.normalize(product.img),
-    app.images.normalize(product.imgHover || product.img),
-  ];
+  const images = [app.images.normalize(product.img)];
   const unitPrice = Number(product.price || 0);
   const selectedTotal = Number((unitPrice * qty).toFixed(2));
   const availableStock = Math.max(0, Number.parseInt(product.stock, 10) || 0);
@@ -80,6 +77,11 @@ function ProductPage({ app, productId }) {
         <aside className="side">
           <h2 style={{ margin: '6px 0 6px', fontSize: '22px' }}>{product.title}</h2>
           <div className="price">{app.currency.formatMXN(unitPrice)}</div>
+          {product.desc && (
+            <p style={{ margin: '10px 0', fontSize: '14px', color: 'var(--muted)', lineHeight: '1.6' }}>
+              {product.desc}
+            </p>
+          )}
           <div className={`stock ${isOutOfStock ? 'is-out' : ''}`}>
             <span className="dot" />
             <span>{isOutOfStock ? 'Sin stock' : `Stock disponible: ${availableStock}`}</span>

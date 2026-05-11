@@ -361,7 +361,7 @@ function CheckoutPage({ app }) {
             <div className="checkout-order-items">
               {orderItems.map((item, idx) => (
                 <p key={`${order.id || 'pedido'}-${idx}`}>
-                  {`${item.quantity} x ${item.title} - ${app.currency.formatMXN(item.subtotal)}`}
+                  {`${item.quantity} x ${item.title}${item.size ? ` (${item.size})` : ''} - ${app.currency.formatMXN(item.subtotal)}`}
                 </p>
               ))}
             </div>

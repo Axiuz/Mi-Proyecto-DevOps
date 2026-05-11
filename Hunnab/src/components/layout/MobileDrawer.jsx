@@ -46,11 +46,6 @@ function MobileDrawer({ drawerOpen, mobileSections, onCloseDrawer, onToggleMobil
             </div>
           </div>
 
-          <div className="m-sec">
-            <a className="m-btn" href="#/aretes">
-              ARETES
-            </a>
-          </div>
 
           <div className="m-sec" data-open={mobileSections.pulseras ? 'true' : 'false'}>
             <button

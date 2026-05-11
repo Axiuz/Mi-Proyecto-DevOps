@@ -73,11 +73,6 @@ function Header({ onOpenMenu, onOpenSearch, cartCount = 0 }) {
             </div>
           </div>
 
-          <div className="nav-item">
-            <a className="nav-link" href="#/aretes">
-              ARETES
-            </a>
-          </div>
 
           <div className="nav-item">
             <a className="nav-link" href="#/pulseras" aria-haspopup="true">

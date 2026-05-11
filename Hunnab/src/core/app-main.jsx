@@ -531,11 +531,11 @@ class CatalogModel {
   }
 
   // Metadatos auxiliares de UI.
-  getCategoryInfoTabs(category) {
+  getCategoryInfoTabs(category, categoryKey = '') {
     return this.defaultCategoryTabs.map((tab) => ({
       id: tab.id,
       label: tab.label,
-      content: typeof tab.content === 'function' ? tab.content(category) : tab.content,
+      content: typeof tab.content === 'function' ? tab.content(category, categoryKey) : tab.content,
     }));
   }
 
