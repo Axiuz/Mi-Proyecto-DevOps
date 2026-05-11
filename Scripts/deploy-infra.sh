@@ -2,8 +2,7 @@
 # ============================================================
 # deploy-infra.sh
 # Despliega (o actualiza) los stacks de CloudFormation:
-#   1. hunnab-vpc  — VPC, subnets, IGW, Security Groups
-#   2. hunnab-s3   — Bucket S3 para el frontend
+#   1. hunnab-s3   — Bucket S3 para el frontend
 # ============================================================
 set -euo pipefail
 
@@ -14,7 +13,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 INFRA_DIR="$SCRIPT_DIR/../infra"
 
 S3_BUCKET_NAME="${S3_BUCKET:-hunnab-frontend-2026}"
-SSH_CIDR="${ALLOWED_SSH_CIDR:-0.0.0.0/0}"
 
 # ── Colores ──────────────────────────────────────────────────
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
@@ -104,16 +102,7 @@ echo "  Region: $REGION"
 echo "============================================"
 echo ""
 
-# ── 1. VPC ───────────────────────────────────────────────────
-deploy_stack "hunnab-vpc" "$INFRA_DIR/vpc.json" \
-  "ProjectName=$PROJECT" \
-  "AllowedSSHCidr=$SSH_CIDR"
-
-VPC_ID=$(get_output "hunnab-vpc" "VpcId")
-PUBLIC_SUBNET=$(get_output "hunnab-vpc" "PublicSubnetId")
-SG_API=$(get_output "hunnab-vpc" "SGApiId")
-
-# ── 2. S3 ────────────────────────────────────────────────────
+# ── 1. S3 ────────────────────────────────────────────────────
 if aws s3api head-bucket --bucket "$S3_BUCKET_NAME" --region "$REGION" 2>/dev/null; then
   warning "Bucket '$S3_BUCKET_NAME' ya existe — saltando creación del stack S3."
   FRONTEND_URL="http://${S3_BUCKET_NAME}.s3-website-${REGION}.amazonaws.com"
@@ -128,13 +117,6 @@ echo ""
 echo "============================================"
 echo "  Infraestructura lista"
 echo "============================================"
-echo "  VPC ID:          $VPC_ID"
-echo "  Subnet publica:  $PUBLIC_SUBNET"
-echo "  SG API:          $SG_API"
-echo "  Frontend URL:    $FRONTEND_URL"
+echo "  Frontend URL: $FRONTEND_URL"
 echo "============================================"
-echo ""
-echo "Proximos pasos:"
-echo "  - Asigna tu EC2 a la subnet: $PUBLIC_SUBNET"
-echo "  - Asigna el SG a tu EC2:     $SG_API"
 echo ""
