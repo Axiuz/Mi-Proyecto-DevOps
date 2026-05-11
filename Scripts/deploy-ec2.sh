@@ -1,48 +1,94 @@
 #!/usr/bin/env bash
 # ============================================================
 # deploy-ec2.sh
-# Instala Docker + Docker Compose en una EC2 Amazon Linux 2 / Ubuntu
-# y levanta el stack de Hunnab.Q
+# Bootstrap completo para una EC2 Ubuntu nueva:
+#   1. Instala Docker CE oficial
+#   2. Genera Hunnab/.env desde .env.example
+#   3. Levanta el stack con Docker Compose
+#
+# Uso (desde la raiz del repo clonado):
+#   ./Scripts/deploy-ec2.sh
 # ============================================================
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
+info()    { echo -e "${GREEN}[INFO]${NC} $*"; }
+warning() { echo -e "${YELLOW}[WARN]${NC} $*"; }
+die()     { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
 
-echo "==> Detectando sistema operativo..."
-if command -v apt-get &>/dev/null; then
-  # Ubuntu / Debian
-  sudo apt-get update -y
-  sudo apt-get install -y docker.io docker-compose-plugin git
+# ── 1. Docker ────────────────────────────────────────────────
+if command -v docker &>/dev/null; then
+  info "Docker ya instalado: $(docker --version)"
+else
+  info "Instalando Docker CE..."
+  sudo apt-get update -y -qq
+  sudo apt-get install -y -qq ca-certificates curl gnupg
+
+  sudo install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+    | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+https://download.docker.com/linux/ubuntu \
+$(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+    | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+  sudo apt-get update -y -qq
+  sudo apt-get install -y -qq \
+    docker-ce docker-ce-cli containerd.io \
+    docker-buildx-plugin docker-compose-plugin
+
   sudo systemctl enable --now docker
-elif command -v yum &>/dev/null; then
-  # Amazon Linux 2
-  sudo yum update -y
-  sudo yum install -y docker git
-  sudo systemctl enable --now docker
-  # Docker Compose plugin
-  DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
-  mkdir -p "$DOCKER_CONFIG/cli-plugins"
-  curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64" \
-    -o "$DOCKER_CONFIG/cli-plugins/docker-compose"
-  chmod +x "$DOCKER_CONFIG/cli-plugins/docker-compose"
+  sudo usermod -aG docker "$USER"
+  info "Docker instalado: $(sudo docker --version)"
 fi
 
-# Agregar usuario actual al grupo docker (evita usar sudo)
-sudo usermod -aG docker "$USER" || true
+# ── 2. Generar .env ──────────────────────────────────────────
+ENV_FILE="$PROJECT_DIR/Hunnab/.env"
+ENV_EXAMPLE="$PROJECT_DIR/.env.example"
 
-echo "==> Construyendo y levantando contenedores..."
+if [ -f "$ENV_FILE" ]; then
+  warning "Hunnab/.env ya existe — se omite la generacion."
+else
+  [ -f "$ENV_EXAMPLE" ] || die "No se encontro .env.example en la raiz del proyecto."
+
+  # Obtener IP publica de la instancia (metadata de EC2)
+  PUBLIC_IP=$(curl -sf --max-time 3 http://169.254.169.254/latest/meta-data/public-ipv4 || echo "")
+
+  cp "$ENV_EXAMPLE" "$ENV_FILE"
+
+  if [ -n "$PUBLIC_IP" ]; then
+    # Agregar la IP de la instancia a CORS_ORIGIN
+    sed -i "s|CORS_ORIGIN=.*|&,http://${PUBLIC_IP}:4000|" "$ENV_FILE"
+    info "Hunnab/.env generado — IP publica: $PUBLIC_IP"
+  else
+    info "Hunnab/.env generado (IP publica no disponible, CORS sin cambios)."
+  fi
+fi
+
+# ── 3. Levantar contenedores ─────────────────────────────────
+info "Levantando stack..."
 cd "$PROJECT_DIR"
+sudo docker compose down --remove-orphans 2>/dev/null || true
+sudo docker compose up --build --force-recreate -d
 
-# Asegúrate de que exista el .env en Hunnab/
-if [ ! -f "Hunnab/.env" ]; then
-  echo "ERROR: Falta Hunnab/.env — copia el .env.example y completa los valores."
-  exit 1
+info "Contenedores activos:"
+sudo docker compose ps
+
+# ── 4. Health check ──────────────────────────────────────────
+PUBLIC_IP=$(curl -sf --max-time 3 http://169.254.169.254/latest/meta-data/public-ipv4 || echo "")
+echo ""
+echo "============================================"
+echo "  Stack levantado"
+echo "============================================"
+if [ -n "$PUBLIC_IP" ]; then
+  echo "  API:  http://${PUBLIC_IP}:4000/api/health"
+  echo "  SSH:  ubuntu@${PUBLIC_IP}"
 fi
-
-docker compose up --build -d
-
 echo ""
-echo "✓ Stack levantado. Servicios corriendo:"
-docker compose ps
-echo ""
-echo "API disponible en: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):4000/health"
+echo "Proximos pasos:"
+echo "  1. Actualiza el secret EC2_HOST en GitHub con: ${PUBLIC_IP:-<ip-publica>}"
+echo "  2. Haz push a main para activar el pipeline CI/CD"
+echo "============================================"
