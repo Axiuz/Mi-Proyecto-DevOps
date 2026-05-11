@@ -15,11 +15,6 @@ function HomePage({ app }) {
           <a key={id} className="card" href={`#/p/${id}`}>
             <div className="img-swap">
               <img className="base" src={app.images.normalize(product.img)} alt={product.title} />
-              <img
-                className="hover"
-                src={app.images.normalize(product.imgHover || product.img)}
-                alt={product.title}
-              />
             </div>
             <div className="card__body">
               <strong>{product.title}</strong>
