@@ -56,7 +56,7 @@ jobs:
     name: Build Frontend React
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout del código
@@ -94,7 +94,7 @@ jobs:
     name: Deploy Frontend → S3
     runs-on: ubuntu-latest
     needs: build-frontend
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Descargar artefacto del build
@@ -137,7 +137,7 @@ jobs:
     name: Deploy Backend → EC2
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout del código
@@ -154,7 +154,7 @@ jobs:
 
       - name: Instalar Docker en EC2 si no está presente
         run: |
-          ssh ubuntu@${{ secrets.EC2_HOST }} "
+          ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=10 ubuntu@${{ secrets.EC2_HOST }} "
             if ! command -v docker &>/dev/null; then
               sudo apt-get update -y
               sudo apt-get install -y ca-certificates curl gnupg
@@ -181,7 +181,7 @@ jobs:
 
       - name: Escribir .env en EC2
         run: |
-          ssh ubuntu@${{ secrets.EC2_HOST }} "cat > ~/app/Hunnab/.env << 'ENVEOF'
+          ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=10 ubuntu@${{ secrets.EC2_HOST }} "cat > ~/app/Hunnab/.env << 'ENVEOF'
           DB_HOST=db
           DB_PORT=3306
           DB_USER=${{ secrets.DB_USER }}
@@ -206,7 +206,7 @@ jobs:
 
       - name: Levantar contenedores en EC2
         run: |
-          ssh ubuntu@${{ secrets.EC2_HOST }} "
+          ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=10 ubuntu@${{ secrets.EC2_HOST }} "
             cd ~/app
             sudo docker compose down --remove-orphans
             sudo docker compose up --build --force-recreate -d
